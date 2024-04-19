@@ -109,7 +109,7 @@ resource "aws_launch_template" "new_launch_template" {
   vpc_security_group_ids = [aws_security_group.ecommerce_sg.id]
   instance_type          = "t2.micro"
   key_name               = "key_pair"
-  user_data              = filebase64("${path.module}/scripts/script.sh")
+  user_data              = filebase64("${path.module}scripts/script.sh")
 
   lifecycle {
     create_before_destroy = true
