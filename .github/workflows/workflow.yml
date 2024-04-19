@@ -40,7 +40,7 @@ jobs:
       - name: Generate Ansible Inventory
         run: |
           echo "[prestashop]" > inventory.yml
-          echo "$(terraform output -raw dns_name) ansible_ssh_user=ubuntu >> inventory.yml
+          echo "$(terraform output -raw dns_name) ansible_ssh_user=ubuntu" >> inventory.yml
         working-directory: ./terraform
 
       - name: Set up Python for Ansible
