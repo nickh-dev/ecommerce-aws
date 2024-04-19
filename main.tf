@@ -21,18 +21,18 @@ data "aws_ami" "ubuntu" {
   owners = ["099720109477"]
 }
 
-resource "aws_vpc" "my_vpc" {
+resource "aws_vpc" "ecommerce_vpc" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
   tags = {
-    Name = "MyVPC"
+    Name = "EcommerceVPC"
   }
 }
 
 resource "aws_subnet" "public_subnet" {
   count                   = 3
-  vpc_id                  = aws_vpc.my_vpc.id
+  vpc_id                  = aws_vpc.ecommerce_vpc.id
   cidr_block              = cidrsubnet("10.0.0.0/16", 8, count.index)
   map_public_ip_on_launch = true
   availability_zone       = element(["eu-central-1a", "eu-central-1b", "eu-central-1c"], count.index)
@@ -43,7 +43,7 @@ resource "aws_subnet" "public_subnet" {
 
 resource "aws_subnet" "private_subnet" {
   count                   = 3
-  vpc_id                  = aws_vpc.my_vpc.id
+  vpc_id                  = aws_vpc.ecommerce_vpc.id
   cidr_block              = cidrsubnet("10.0.0.0/16", 8, count.index + 3)
   map_public_ip_on_launch = false
   availability_zone       = element(["eu-central-1a", "eu-central-1b", "eu-central-1c"], count.index)
@@ -52,19 +52,19 @@ resource "aws_subnet" "private_subnet" {
   }
 }
 
-resource "aws_internet_gateway" "my_igw" {
-  vpc_id = aws_vpc.my_vpc.id
+resource "aws_internet_gateway" "new_igw" {
+  vpc_id = aws_vpc.ecommerce_vpc.id
   tags = {
-    Name = "MyInternetGateway"
+    Name = "InternetGateway"
   }
 
 }
 resource "aws_route_table" "public_route_table" {
-  vpc_id = aws_vpc.my_vpc.id
+  vpc_id = aws_vpc.ecommerce_vpc.id
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.my_igw.id
+    gateway_id = aws_internet_gateway.new_igw.id
   }
 
   tags = {
@@ -78,9 +78,9 @@ resource "aws_route_table_association" "public_rta" {
   route_table_id = aws_route_table.public_route_table.id
 }
 
-resource "aws_security_group" "my_sg" {
-  name   = "my_security_group"
-  vpc_id = aws_vpc.my_vpc.id
+resource "aws_security_group" "ecommerce_sg" {
+  name   = "ecommerce_security_group"
+  vpc_id = aws_vpc.ecommerce_vpc.id
 
   dynamic "ingress" {
     for_each = ["80", "22", "3306"]
@@ -104,9 +104,9 @@ resource "aws_security_group" "my_sg" {
   }
 }
 
-resource "aws_launch_template" "my_launch_template" {
+resource "aws_launch_template" "new_launch_template" {
   image_id               = data.aws_ami.ubuntu.id
-  vpc_security_group_ids = [aws_security_group.my_sg.id]
+  vpc_security_group_ids = [aws_security_group.ecommerce_sg.id]
   instance_type          = "t2.micro"
   key_name               = "key_pair"
   user_data              = filebase64("script.sh")
@@ -117,10 +117,10 @@ resource "aws_launch_template" "my_launch_template" {
 }
 
 resource "aws_lb" "main" {
-  name               = "MyALB"
+  name               = "NewALB"
   internal           = false
   load_balancer_type = "application"
-  security_groups    = [aws_security_group.my_sg.id]
+  security_groups    = [aws_security_group.ecommerce_sg.id]
   subnets            = [for subnet in aws_subnet.public_subnet : subnet.id]
 }
 
@@ -128,7 +128,7 @@ resource "aws_lb_target_group" "blue" {
   name     = "BlueTargetGroup"
   port     = 80
   protocol = "HTTP"
-  vpc_id   = aws_vpc.my_vpc.id
+  vpc_id   = aws_vpc.ecommerce_vpc.id
 
   health_check {
     enabled             = true
@@ -145,7 +145,7 @@ resource "aws_lb_target_group" "green" {
   name     = "GreenTargetGroup"
   port     = 80
   protocol = "HTTP"
-  vpc_id   = aws_vpc.my_vpc.id
+  vpc_id   = aws_vpc.ecommerce_vpc.id
 
   health_check {
     enabled             = true
@@ -169,8 +169,8 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-resource "aws_autoscaling_group" "my_asg" {
-  name                = "my_autoscaling_group"
+resource "aws_autoscaling_group" "ecommerce_asg" {
+  name                = "new_autoscaling_group"
   vpc_zone_identifier = [for subnet in aws_subnet.public_subnet : subnet.id]
   desired_capacity    = 2
   max_size            = 3
@@ -178,12 +178,12 @@ resource "aws_autoscaling_group" "my_asg" {
   target_group_arns   = [aws_lb_target_group.blue.arn]
 
   launch_template {
-    id      = aws_launch_template.my_launch_template.id
+    id      = aws_launch_template.new_launch_template.id
     version = "$Latest"
   }
 }
 
-resource "aws_db_subnet_group" "my_db_subnet_group" {
+resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "mysql_subnet_group"
   subnet_ids = [for subnet in aws_subnet.private_subnet : subnet.id]
 
@@ -193,16 +193,16 @@ resource "aws_db_subnet_group" "my_db_subnet_group" {
 }
 
 resource "aws_db_instance" "db_instance" {
-  identifier           = "mysqldb"
+  identifier           = "sqldb"
   instance_class       = "db.t3.micro"
   engine               = "mysql"
   engine_version       = "8.0.35"
   username             = "admin"
   password             = "password123"
-  db_subnet_group_name = aws_db_subnet_group.my_db_subnet_group.name
+  db_subnet_group_name = aws_db_subnet_group.db_subnet_group.name
   allocated_storage    = 20
 
-  vpc_security_group_ids = [aws_security_group.my_sg.id]
+  vpc_security_group_ids = [aws_security_group.ecommerce_sg.id]
 
   publicly_accessible = true
   skip_final_snapshot = true
@@ -261,7 +261,7 @@ resource "aws_ecs_service" "ecommerce_service" {
 
   network_configuration {
     subnets          = [for subnet in aws_subnet.private_subnet : subnet.id]
-    security_groups  = [aws_security_group.my_sg.id]
+    security_groups  = [aws_security_group.ecommerce_sg.id]
     assign_public_ip = true
   }
 
