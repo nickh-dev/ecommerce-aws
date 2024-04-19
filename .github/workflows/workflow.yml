@@ -34,12 +34,13 @@ jobs:
         working-directory: ./terraform
 
       - name: Generate Ansible Inventory
-      run: |
-        echo "[prestashop]" > inventory
-        echo "$(terraform output -raw dns_name)" ansible_ssh_user=ubuntu ansible_ssh_private_key_file=./key_pair.pem >> inventory.yml
-      env:
-        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "[prestashop]" > inventory.yml
+          echo "$(terraform output -raw dns_name) ansible_ssh_user=ubuntu ansible_ssh_private_key_file=./key_pair.pem" >> inventory.yml
+        working-directory: ./terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
       - name: Set up Python for Ansible
         uses: actions/setup-python@v2
@@ -52,5 +53,5 @@ jobs:
           pip install ansible
 
       - name: Execute Ansible Playbooks
-        run: ansible-playbook -i ansible/inventory.yml ansible/main.yml
+        run: ansible-playbook -i inventory.yml main.yml
         working-directory: ./ansible
