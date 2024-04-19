@@ -1,4 +1,4 @@
-*.hcl
+*.lock.*
 *.backup
-*.tfstate
+*.tfstate*
 .terraform/
