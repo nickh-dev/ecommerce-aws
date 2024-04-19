@@ -109,7 +109,7 @@ resource "aws_launch_template" "new_launch_template" {
   vpc_security_group_ids = [aws_security_group.ecommerce_sg.id]
   instance_type          = "t2.micro"
   key_name               = "key_pair"
-  user_data              = filebase64("scripts/script.sh")
+  user_data              = filebase64("${path.module}/scripts/script.sh")
 
   lifecycle {
     create_before_destroy = true
@@ -205,10 +205,26 @@ resource "aws_db_instance" "db_instance" {
 
   vpc_security_group_ids = [aws_security_group.ecommerce_sg.id]
 
-  publicly_accessible = true
+  publicly_accessible = false
   skip_final_snapshot = true
 
   tags = {
     Name = "Development"
   }
+}
+
+output "dns_name" {
+  value = aws_lb.main.dns_name
+}
+
+output "db_endpoint" {
+  value = aws_db_instance.db_instance.endpoint
+}
+
+output "db_endpoint" {
+  value = aws_db_instance.db_instance.username
+}
+
+output "db_endpoint" {
+  value = aws_db_instance.db_instance.password
 }
