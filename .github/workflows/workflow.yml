@@ -1,4 +1,5 @@
-name: Deploy Infrastructure
+name: Deploy and Manage Infrastructure
+
 env:
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -11,10 +12,18 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      destroy:
+        description: 'Set to "true" to manually destroy infrastructure.'
+        required: false
+        default: "false"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    outputs:
+      status: ${{ job.status }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -56,3 +65,24 @@ jobs:
       - name: Execute Ansible Playbooks
         run: ansible-playbook -i inventory.yml main.yml
         working-directory: ./ansible
+
+  cleanup:
+    if: ${{ needs.deploy.outputs.status == 'failure' || (github.event.inputs.destroy == 'true' && github.event_name == 'workflow_dispatch') }}
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v1
+        with:
+          terraform_version: '1.8.1'
+
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
+
+      - name: Terraform Destroy
+        run: terraform destroy -auto-approve
+        working-directory: ./terraform
