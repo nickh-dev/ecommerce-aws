@@ -109,6 +109,8 @@ resource "aws_launch_template" "new_launch_template" {
   vpc_security_group_ids = [aws_security_group.ecommerce_sg.id]
   instance_type          = "t2.micro"
   user_data              = filebase64("${path.module}/scripts/script.sh")
+  key_name               = "key_pair"
+
 
   lifecycle {
     create_before_destroy = true
@@ -227,4 +229,34 @@ output "db_username" {
 output "db_password" {
   value     = aws_db_instance.db_instance.password
   sensitive = true
+}
+
+data "aws_secretsmanager_secret" "ssh_key" {
+  name = "MySSHKey"
+}
+
+data "aws_secretsmanager_secret_version" "ssh_key_version" {
+  secret_id = data.aws_secretsmanager_secret.ssh_key.id
+}
+
+output "SSHPrivateKey" {
+  value     = data.aws_secretsmanager_secret_version.ssh_key_version.secret_string
+  sensitive = true
+}
+
+
+resource "null_resource" "generate_ansible_inventory" {
+  depends_on = [
+    aws_lb.main,
+    aws_autoscaling_group.ecommerce_asg,
+    aws_db_instance.db_instance
+  ]
+
+  provisioner "local-exec" {
+    command = <<EOF
+      cd ${path.module}/../ansible && \\
+      echo "[prestashop]" > inventory.yml && \\
+      echo "${aws_lb.main.dns_name} ansible_ssh_user=ubuntu" >> inventory.yml
+    EOF
+  }
 }

@@ -68,7 +68,7 @@ jobs:
 
   cleanup:
     if: ${{ needs.deploy.outputs.status == 'failure' || (github.event.inputs.destroy == 'true' && github.event_name == 'workflow_dispatch') }}
-    needs: [deploy]
+    needs: deploy
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository

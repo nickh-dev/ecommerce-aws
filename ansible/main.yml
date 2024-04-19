@@ -1,10 +1,14 @@
-- hosts: all
+- hosts: prestashop
   become: yes
   vars:
     db_endpoint: "{{ lookup('env', 'DB_ENDPOINT') }}"
     db_username: "{{ lookup('env', 'DB_USERNAME') }}"
     db_password: "{{ lookup('env', 'DB_PASSWORD') }}"
+    ansible_ssh_private_key: "{{ lookup('amazon.aws.aws_secret', 'MySSHKey', region='eu-central-1') }}"
   tasks:
+    - name: Check server connectivity
+      ping:
+      
     - name: Install Nginx and PHP
       apt:
         name:
