@@ -34,5 +34,5 @@ jobs:
           pip install ansible
 
       - name: Execute playbook
-        run: ansible-playbook -i ansible/inventory ansible/switch_traffic.yml -e "current_environment=${{ github.event.inputs.environment }}"
+        run: ansible-playbook ./ansible/switch_traffic.yml -e "current_environment=${{ github.event.inputs.environment }}"
         working-directory: ./ansible
