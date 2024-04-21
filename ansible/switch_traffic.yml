@@ -1,0 +1,17 @@
+- name: Switch ALB traffic
+  hosts: localhost
+  gather_facts: no
+  vars:
+    listener_arn: "arn:aws:elasticloadbalancing:eu-central-1:767398118316:listener/app/ALB/09b9b936d9c22ce9/f0fef070b997812c"
+    target_group_arn_blue: "arn:aws:elasticloadbalancing:eu-central-1:767398118316:targetgroup/blue/5474b38c14e836ba"
+    target_group_arn_green: "arn:aws:elasticloadbalancing:eu-central-1:767398118316:targetgroup/green/c4edf11846c54d28"
+    current_environment: "green"
+
+  tasks:
+    - name: Modify ALB listener using AWS CLI
+      command: >
+        aws elbv2 modify-listener --listener-arn "{{ listener_arn }}"
+                                  --default-actions Type=forward,TargetGroupArn="{{ target_group_arn_green if current_environment == 'blue' else target_group_arn_blue }}"
+                                  --port 80
+                                  --protocol HTTP
+      delegate_to: localhost

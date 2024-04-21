@@ -2,3 +2,4 @@
 *.backup
 *.tfstate*
 .terraform/
+.vscode
